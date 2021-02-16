@@ -1,11 +1,12 @@
 /*!
  * Copyright (c) 2021 Digital Bazaar, Inc. All rights reserved.
  */
-import {authorizeAccessToken} from '../../lib';
+import {authorizeAccessToken, hashClientSecret} from '../../lib';
 import chai from 'chai';
 import chaiHttp from 'chai-http';
 import express from 'express';
 import LRU from 'lru-cache';
+
 
 chai.use(chaiHttp);
 chai.should();
@@ -31,12 +32,17 @@ describe('authorizeAccessToken', async () => {
     authorizeAccessToken({
       cache: claimsCache,
       // scope required for this endpoint
-      scope: 'custom-action-scope',
+      scope: 'read write',
       // eslint-disable-next-line no-unused-vars
-      loadClientRegistration: async ({clientId}) => {
+      loadClientRegistration: async ({clientId = 'BYkjuH'}) => {
         // do stuff to load the client registration from db or config
+        return {
+          clientId,
+          clientSecretHash: await hashClientSecret({clientSecret: 'testClientSecret'}),
+          scope: ['read', 'write']
+        }
       },
-      validIssuers: 'localhost',
+      validIssuers: ['https://localhost:port-for-issuer'],
       // customValidate  // optional
     })
   );
@@ -51,8 +57,8 @@ describe('authorizeAccessToken', async () => {
     requester.close();
   });
 
-  it('', async () => {
-    const res = await requester.post('/vc-issuer/issue')
+  it('test', async () => {
+    const res = await requester.post(issueCredential)
       .set('authorization', `Bearer ${MOCK_ACCESS_TOKEN}`)
       .send({});
     console.log(res);

@@ -8,7 +8,8 @@ module.exports = {
     mocha: true
   },
   extends: [
-    'digitalbazaar'
+    'digitalbazaar',
+    'digitalbazaar/jsdoc'
   ],
   ignorePatterns: ['node_modules/']
 };
