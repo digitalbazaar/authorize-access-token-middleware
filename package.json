@@ -26,10 +26,6 @@
     "@digitalbazaar/minimal-jwt": "^1.0.1",
     "auth-header": "^1.0.0",
     "base64url-universal": "^1.1.0",
-    "bedrock": "^4.1.1",
-    "bedrock-https-agent": "^2.0.0",
-    "bedrock-mongodb": "^8.1.1",
-    "bedrock-tokenizer": "^1.1.0",
     "esm": "^3.2.25"
   },
   "devDependencies": {
@@ -43,6 +39,12 @@
     "lru-cache": "^6.0.0",
     "mocha": "^8.1.0",
     "nyc": "^15.1.0"
+  },
+  "peerDependencies": {
+    "bedrock": "^4.1.1",
+    "bedrock-https-agent": "^2.0.0",
+    "bedrock-mongodb": "^8.1.1",
+    "bedrock-tokenizer": "^1.1.0"
   },
   "nyc": {
     "exclude": [
