@@ -41,6 +41,32 @@ async function hashClientSecret({clientSecret}) {
   return mh;
 }
 
+const mockTokenizer = {
+  get({id, alg}) {
+    return {
+      id,
+      hmac: {
+        // eslint-disable-next-line max-len
+        id: 'https://localhost:18443/kms/keystores/z19wuB5GSxny6xVDsLgaAibd6/keys/z19rQ9Hjr4tCUSSQTmDiTE771',
+        type: 'Sha256HmacKey2019',
+        algorithm: alg,
+        invocationSigner: {
+          // eslint-disable-next-line max-len
+          id: 'did:key:z6Mkj582WrF84bRJKSFjn9QkEAbUY346Qh7EhHoMoqE7175P#z6Mkj582WrF84bRJKSFjn9QkEAbUY346Qh7EhHoMoqE7175P',
+          type: 'Ed25519VerificationKey2018'
+        },
+        kmsClient: {
+          // eslint-disable-next-line max-len
+          keystore: 'https://localhost:18443/kms/keystores/z19wuB5GSxny6xVDsLgaAibd6',
+          httpsAgent: {}
+        },
+        cache: {},
+        _pruneCacheTimer: null
+      }
+    };
+  }
+};
+
 // eslint-disable-next-line no-unused-vars
 const mockLoadClientRegistration = async ({clientId}) => {
   return {
@@ -67,7 +93,8 @@ describe('authorizeAccessToken', async () => {
       // eslint-disable-next-line no-unused-vars
       customValidate: async ({req, claims}) => {
         // perform custom validation on access token claims here
-      }
+      },
+      tokenizer: mockTokenizer
     })
   );
 
@@ -81,15 +108,11 @@ describe('authorizeAccessToken', async () => {
     requester.close();
   });
 
-  // it('test', async () => {
-  //   const res = await requester.post('/api/example')
-  //     .set('authorization', `Bearer ${MOCK_ACCESS_TOKEN}`)
-  //     .send({});
-  //   // console.log(res);
-  // });
-
-  it('should error if called un-authenticated', async () => {
-    const res = await requester.post('/api/example').send({});
+  it('test', async () => {
+    const res = await requester.post('/api/example')
+      .set('content-type', 'application/json')
+      .set('authorization', `Bearer ${MOCK_ACCESS_TOKEN}`)
+      .send({});
     expect(res).to.have.status(403);
     expect(res).to.be.json;
     expect(res.body.error).to.equal('access_denied');
