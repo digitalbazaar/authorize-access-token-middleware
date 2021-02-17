@@ -29,6 +29,7 @@
   "module": "lib/main.js",
   "dependencies": {
     "@digitalbazaar/minimal-jwt": "^1.0.1",
+    "@interop/oauth2-errors": "^2.0.0",
     "assert-plus": "^1.0.0",
     "auth-header": "^1.0.0",
     "base64url-universal": "^1.1.0"
