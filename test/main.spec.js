@@ -9,7 +9,7 @@ import express from 'express';
 import LRU from 'lru-cache';
 
 import {authorizeAccessToken} from '../lib';
-// import noopLogger from '../lib/noopLogger';
+import noopLogger from '../lib/noopLogger';
 
 chai.use(chaiHttp);
 chai.should();
@@ -22,12 +22,17 @@ const cache = new LRU({
 
 const bodyParserUrl = express.urlencoded({extended: true});
 
-// eslint-disable-next-line no-unused-vars
-const MOCK_ACCESS_TOKEN = 'eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc3In0' +
+const INVALID_MOCK_ACCESS_TOKEN = 'eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc3In0' +
   '.eyJpc3MiOiJodHRwOi8vYXV0aG9yaXphdGlvbi1zZXJ2ZXIuZXhhbXBsZS5jb20iLCJzdW' +
   'IiOiJfX2JfYyIsImV4cCI6MTU4ODQyMDgwMCwic2NvcGUiOiJjYWxlbmRhciIsImF1ZCI6I' +
   'mh0dHBzOi8vY2FsLmV4YW1wbGUuY29tLyJ9.nNWJ2dXSxaDRdMUKlzs-cYI' +
   'j8MDoM6Gy7pf_sKrLGsAFf1C2bDhB60DQfW1DZL5npdko1_Mmk5sUfzkiQNVpYw';
+
+const VALID_MOCK_ACCESS_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9' +
+  '.eyJpc3MiOiJodHRwczovL2lzc3Vlci5leGFtcGxlLmNvbSIsImlhdCI6MTYxMzY1NTAyM' +
+  'CwiZXhwIjoxNjQ1MTkxMDIwLCJhdWQiOiIiLCJzdWIiOiIiLCJjbGllbnRfaWQiOiJzNkJoZFJ' +
+  'rcXQzIiwic2NvcGUiOiJyZWFkIHdyaXRlIn0.Hv3I-bgcsxn4IaCmU0dcywaP8Sw' +
+  '_LBLrEgA_pSVc5zM';
 
 async function hashClientSecret({clientSecret}) {
   assert.string(clientSecret, 'clientSecret');
@@ -42,7 +47,7 @@ async function hashClientSecret({clientSecret}) {
 }
 
 const mockTokenizer = {
-  get({id, alg}) {
+  async get({id, alg}) {
     return {
       id,
       hmac: {
@@ -61,21 +66,25 @@ const mockTokenizer = {
           httpsAgent: {}
         },
         cache: {},
-        _pruneCacheTimer: null
+        _pruneCacheTimer: null,
+        // eslint-disable-next-line no-unused-vars
+        verify: ({data, signature}) => {
+          return true;
+        }
       }
     };
   }
 };
 
 // eslint-disable-next-line no-unused-vars
-const mockLoadClientRegistration = async ({clientId}) => {
+const mockLoadClientRegistration = async ({clientId = 's6BhdRkqt3'}) => {
   return {
     client: {
-      client_id: 's6BhdRkqt3',
+      client_id: clientId,
       client_secret_hash: await hashClientSecret({
         clientSecret: 'testClientSecret'
       }),
-      scope: ['read', 'write']
+      scope: 'read write'
     }
   };
 };
@@ -94,7 +103,8 @@ describe('authorizeAccessToken', async () => {
       customValidate: async ({req, claims}) => {
         // perform custom validation on access token claims here
       },
-      tokenizer: mockTokenizer
+      tokenizer: mockTokenizer,
+      noopLogger
     })
   );
 
@@ -108,15 +118,41 @@ describe('authorizeAccessToken', async () => {
     requester.close();
   });
 
-  it('test', async () => {
+  it('should error if missing authorization header', async () => {
     const res = await requester.post('/api/example')
-      .set('content-type', 'application/json')
-      .set('authorization', `Bearer ${MOCK_ACCESS_TOKEN}`)
+      .send({});
+    expect(res).to.have.status(400);
+    expect(res).to.be.json;
+    expect(res.body.error).to.equal('invalid_request');
+    expect(res.body.error_description)
+      .to.equal('Missing or invalid "authorization" header.');
+  });
+  it('should error if authorization header is invalid', async () => {
+    const res = await requester.post('/api/example')
+      .set('authorization', `notBearer ${VALID_MOCK_ACCESS_TOKEN}`)
+      .send({});
+    expect(res).to.have.status(400);
+    expect(res).to.be.json;
+    expect(res.body.error).to.equal('invalid_request');
+    expect(res.body.error_description)
+      .to.equal('Missing or invalid "authorization" header.');
+  });
+  it('should error if cannot verify access token', async () => {
+    const res = await requester.post('/api/example')
+      .set('authorization', `Bearer ${INVALID_MOCK_ACCESS_TOKEN}`)
       .send({});
     expect(res).to.have.status(403);
     expect(res).to.be.json;
     expect(res.body.error).to.equal('access_denied');
-    // expect(res.body.error_description)
-    //   .to.equal('Authentication Code required.');
+    expect(res.body.error_description).to.equal(
+      'Invalid access token. The access token could not be verified.');
+  });
+  it('should successfully authorize access token', async () => {
+    const res = await requester.post('/api/example')
+      .set('content-type', 'application/x-www-form-urlencoded')
+      .set('authorization', `Bearer ${VALID_MOCK_ACCESS_TOKEN}`)
+      .send({});
+    // the res status is 404 since there is no handler that forwards it along to
+    expect(res).to.have.status(404);
   });
 });
