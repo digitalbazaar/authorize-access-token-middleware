@@ -46,7 +46,7 @@
     "mocha": "^8.1.0"
   },
   "engines": {
-    "node": ">=12"
+    "node": ">=14"
   },
   "keywords": [
     "oauth",

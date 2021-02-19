@@ -125,7 +125,7 @@ describe('authorizeAccessToken', async () => {
     expect(res).to.be.json;
     expect(res.body.error).to.equal('invalid_request');
     expect(res.body.error_description)
-      .to.equal('Missing or invalid "authorization" header.');
+      .to.equal('Missing "authorization" header.');
   });
   it('should error if authorization header is invalid', async () => {
     const res = await requester.post('/api/example')
@@ -135,7 +135,7 @@ describe('authorizeAccessToken', async () => {
     expect(res).to.be.json;
     expect(res.body.error).to.equal('invalid_request');
     expect(res.body.error_description)
-      .to.equal('Missing or invalid "authorization" header.');
+      .to.equal('Invalid "authorization" header.');
   });
   it('should error if cannot verify access token', async () => {
     const res = await requester.post('/api/example')
