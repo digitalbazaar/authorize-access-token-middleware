@@ -2,7 +2,7 @@
   "name": "@digitalbazaar/authorize-access-token-middleware",
   "version": "0.0.1",
   "description": "General express middleware to protect API endpoints via OAuth 2.0 access tokens.",
-  "homepage": "https://github.com/digitalbazaar/isomorphic-js-lib-template",
+  "homepage": "https://github.com/digitalbazaar/authorize-access-token-middleware",
   "author": {
     "name": "Digital Bazaar, Inc.",
     "email": "support@digitalbazaar.com",
@@ -28,6 +28,7 @@
   ],
   "module": "lib/main.js",
   "dependencies": {
+    "@digitalbazaar/lru-memoize": "^2.0.0",
     "@digitalbazaar/minimal-jwt": "^1.0.1",
     "@interop/oauth2-errors": "^2.0.0",
     "assert-plus": "^1.0.0",
@@ -35,15 +36,15 @@
     "base64url-universal": "^1.1.0"
   },
   "devDependencies": {
-    "chai": "^4.2.0",
+    "chai": "^4.3.4",
     "chai-http": "^4.3.0",
-    "cross-env": "^7.0.2",
-    "eslint": "^7.9.0",
-    "eslint-config-digitalbazaar": "^2.6.1",
-    "eslint-plugin-jsdoc": "^30.2.0",
+    "cross-env": "^7.0.3",
+    "eslint": "^7.25.0",
+    "eslint-config-digitalbazaar": "^2.8.0",
+    "eslint-plugin-jsdoc": "^32.3.3",
     "express": "^4.17.1",
     "lru-cache": "^6.0.0",
-    "mocha": "^8.1.0"
+    "mocha": "^8.3.2"
   },
   "engines": {
     "node": ">=14"
