@@ -118,7 +118,7 @@ describe('authorizeAccessToken()', () => {
         // perform custom validation on access token claims here
       },
       verifySignature: _createVerifyFn({tokenizer: mockTokenizer}),
-      logger: console
+      // logger: console
     }),
     // eslint-disable-next-line no-unused-vars
     (req, res, next) => {
