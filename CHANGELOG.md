@@ -1,4 +1,4 @@
-# isomorphic-js-lib-template Changelog
+# authorize-access-token-middleware Changelog
 
 ## 1.0.0 - TBD
 

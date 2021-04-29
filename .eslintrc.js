@@ -5,7 +5,10 @@ module.exports = {
     'eslint-config-digitalbazaar/jsdoc'
   ],
   env: {
-    node: true
+    node: true,
+    mocha: true
   },
-  ignorePatterns: ['dist/']
+  rules: {
+    'jsdoc/check-examples': 0
+  }
 };
