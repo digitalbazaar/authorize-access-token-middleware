@@ -6,21 +6,16 @@ import chai from 'chai';
 import chaiHttp from 'chai-http';
 import crypto from 'crypto';
 import express from 'express';
-import LRU from 'lru-cache';
 
 import {authorizeAccessToken} from '../lib';
-import noopLogger from '../lib/noopLogger';
+import {_assertScope} from '../lib/authorizeAccessToken.js';
+import {InvalidRequest} from '@interop/oauth2-errors';
+import base64url from 'base64url-universal';
+const DEFAULT_ALLOWED_JWT_ALGS = new Set(['HS256', 'ES256']);
 
 chai.use(chaiHttp);
 chai.should();
 const {expect} = chai;
-const cache = new LRU({
-  max: 1000,
-  // 5 minutes
-  maxAge: 300000
-});
-
-const bodyParserUrl = express.urlencoded({extended: true});
 
 const INVALID_MOCK_ACCESS_TOKEN = 'eyJhbGciOiJFUzI1NiIsImtpZCI6Ijc3In0' +
   '.eyJpc3MiOiJodHRwOi8vYXV0aG9yaXphdGlvbi1zZXJ2ZXIuZXhhbXBsZS5jb20iLCJzdW' +
@@ -33,6 +28,29 @@ const VALID_MOCK_ACCESS_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9' +
   'CwiZXhwIjoxNjQ1MTkxMDIwLCJhdWQiOiIiLCJzdWIiOiIiLCJjbGllbnRfaWQiOiJzNkJoZFJ' +
   'rcXQzIiwic2NvcGUiOiJyZWFkIHdyaXRlIn0.Hv3I-bgcsxn4IaCmU0dcywaP8Sw' +
   '_LBLrEgA_pSVc5zM';
+
+function _createVerifyFn({tokenizer}) {
+  return async function verifySignature({
+    alg, kid, data, signature, ALLOWED_JWT_ALGS = DEFAULT_ALLOWED_JWT_ALGS
+  }) {
+    if(!ALLOWED_JWT_ALGS.has(alg)) {
+      throw new InvalidRequest({
+        description: `"${alg}" is invalid.`
+      });
+    }
+    let hmac;
+    try {
+      ({hmac} = await tokenizer.get({id: kid}));
+    } catch(e) {
+      throw new InvalidRequest({
+        description: `Unable to verify token with kid: "${kid}"`
+      });
+    }
+
+    const encodedSignature = base64url.encode(signature);
+    return hmac.verify({data, signature: encodedSignature});
+  };
+}
 
 async function hashClientSecret({clientSecret}) {
   assert.string(clientSecret, 'clientSecret');
@@ -79,33 +97,33 @@ const mockTokenizer = {
 // eslint-disable-next-line no-unused-vars
 const mockLoadClientRegistration = async ({clientId = 's6BhdRkqt3'}) => {
   return {
-    client: {
-      client_id: clientId,
-      client_secret_hash: await hashClientSecret({
-        clientSecret: 'testClientSecret'
-      }),
-      scope: 'read write'
-    }
+    client_id: clientId,
+    client_secret_hash: await hashClientSecret({
+      clientSecret: 'testClientSecret'
+    }),
+    scope: 'read write'
   };
 };
 
-describe('authorizeAccessToken', async () => {
+describe('authorizeAccessToken()', () => {
   const app = express();
   app.post('/api/example',
-    bodyParserUrl,
     authorizeAccessToken({
-      cache,
       // scope required for this endpoint
-      scope: 'read write',
+      requiredScope: 'read write',
       loadClientRegistration: mockLoadClientRegistration,
       validIssuers: ['https://issuer.example.com'],
       // eslint-disable-next-line no-unused-vars
-      customValidate: async ({req, claims}) => {
+      validateClaims: async ({claims}) => {
         // perform custom validation on access token claims here
       },
-      tokenizer: mockTokenizer,
-      noopLogger
-    })
+      verifySignature: _createVerifyFn({tokenizer: mockTokenizer}),
+      logger: console
+    }),
+    // eslint-disable-next-line no-unused-vars
+    (req, res, next) => {
+      res.send('OK');
+    }
   );
 
   let requester;
@@ -127,6 +145,7 @@ describe('authorizeAccessToken', async () => {
     expect(res.body.error_description)
       .to.equal('Missing "authorization" header.');
   });
+
   it('should error if authorization header is invalid', async () => {
     const res = await requester.post('/api/example')
       .set('authorization', `notBearer ${VALID_MOCK_ACCESS_TOKEN}`)
@@ -137,6 +156,7 @@ describe('authorizeAccessToken', async () => {
     expect(res.body.error_description)
       .to.equal('Invalid "authorization" header.');
   });
+
   it('should error if cannot verify access token', async () => {
     const res = await requester.post('/api/example')
       .set('authorization', `Bearer ${INVALID_MOCK_ACCESS_TOKEN}`)
@@ -147,12 +167,133 @@ describe('authorizeAccessToken', async () => {
     expect(res.body.error_description).to.equal(
       'Invalid access token. The access token could not be verified.');
   });
+
   it('should successfully authorize access token', async () => {
     const res = await requester.post('/api/example')
-      .set('content-type', 'application/x-www-form-urlencoded')
+      .set('content-type', 'application/json')
       .set('authorization', `Bearer ${VALID_MOCK_ACCESS_TOKEN}`)
       .send({});
-    // the res status is 404 since there is no handler that forwards it along to
-    expect(res).to.have.status(404);
+    expect(res).to.have.status(200);
+  });
+});
+
+describe('_assertScope', () => {
+  it('should throw on missing params', () => {
+    expect(() => _assertScope())
+      .to.throw(assert.AssertionError,
+        'options.tokenScope (string) is required');
+    expect(() => _assertScope({tokenScope: 'read'}))
+      .to.throw(assert.AssertionError,
+        'options.registeredScope (string) is required');
+  });
+
+  it('should throw on token scope/required scope mismatch', () => {
+    let error;
+    try {
+      _assertScope({
+        tokenScope: 'read', registeredScope: 'read', requiredScope: 'write'
+      });
+    } catch(e) {
+      error = e;
+    }
+    expect(error).to.exist;
+    expect(error.error).to.equal('access_denied');
+    expect(error.error_description).to
+      .equal('Access denied for token scope "read". Scope required: "write".');
+    expect(error.statusCode).to.equal(403);
+  });
+
+  it('should throw on token scope/registered scope mismatch', () => {
+    let error;
+    try {
+      _assertScope({
+        tokenScope: 'write', registeredScope: 'read', requiredScope: 'write'
+      });
+    } catch(e) {
+      error = e;
+    }
+    expect(error).to.exist;
+    expect(error.error).to.equal('access_denied');
+    expect(error.error_description).to
+      .equal('Access denied. Token scope "write" does not match registered ' +
+        'client scope.');
+    expect(error.statusCode).to.equal(403);
+  });
+
+  it('should succeed on match between token, required and registered', () => {
+    let error;
+    try {
+      _assertScope({
+        tokenScope: 'read', registeredScope: 'read', requiredScope: 'read'
+      });
+    } catch(e) {
+      error = e;
+    }
+    expect(error).to.not.exist;
+  });
+
+  it('should succeed when token scope contains required scope', () => {
+    let error;
+    try {
+      _assertScope({
+        tokenScope: 'read write', registeredScope: 'read write',
+        requiredScope: 'read'
+      });
+    } catch(e) {
+      error = e;
+    }
+    expect(error).to.not.exist;
+  });
+
+  it('should succeed when registered scope contains token scope', () => {
+    let error;
+    try {
+      _assertScope({
+        tokenScope: 'read', registeredScope: 'read write',
+        requiredScope: 'read'
+      });
+    } catch(e) {
+      error = e;
+    }
+    expect(error).to.not.exist;
+  });
+
+  it('should fail when token scope is a subset of registered/required', () => {
+    let error;
+    try {
+      _assertScope({
+        tokenScope: 'read', registeredScope: 'read write',
+        requiredScope: 'write read'
+      });
+    } catch(e) {
+      error = e;
+    }
+    expect(error).to.exist;
+    expect(error.error).to.equal('access_denied');
+    expect(error.error_description).to
+      .equal('Access denied for token scope "read". ' +
+        'Scope required: "write read".');
+    expect(error.statusCode).to.equal(403);
+  });
+
+  it('should succeed when token scope matches (order-independent)', () => {
+    let error;
+    try {
+      _assertScope({
+        tokenScope: 'read write', registeredScope: 'read write',
+        requiredScope: 'write read'
+      });
+    } catch(e) {
+      error = e;
+    }
+    try {
+      _assertScope({
+        tokenScope: 'read write', registeredScope: 'write read',
+        requiredScope: 'write read'
+      });
+    } catch(e) {
+      error = e;
+    }
+    expect(error).to.not.exist;
   });
 });
