@@ -23,7 +23,6 @@ authentication (for that, Passport is more useful).
 Assumptions:
 
 * Access tokens will be passed via HTTP headers, using `Bearer <token>` scheme.
-* Unsigned tokens (with alg: 'none') are not accepted; a signature is required.
 * Assumes a required allow-list of approved issuers.
 
 Not supported in v1.0:
@@ -63,8 +62,6 @@ const {authorizeAccessToken} = require('@digitalbazaar/authorize-access-token-mi
 
 ```js
 app.post('/example/api/endpoint',
-  // If authorization is successful, `req.clientMetadata` will be set with
-  // the decoded and validated claims from the token
   authorizeAccessToken({
     // OAuth2 scope required for this endpoint
     requiredScope: 'my.custom.scope',
@@ -77,8 +74,9 @@ app.post('/example/api/endpoint',
       // granted scope. You can also do custom client validation here
       // (has the client been revoked? ran over quota or metering limits?)
     },
-
-    verifySignature: async ({}) => {
+    
+    // Custom verify callback should verify algorithm and signature (using a remote KMS or similar)
+    verifySignature: async ({alg, kid, data, signature}) => {
     },
 
     validateClaims: async ({claims}) => {
@@ -86,11 +84,22 @@ app.post('/example/api/endpoint',
       // validate the `aud`ience claim)
     },
 
+    decorateError: async ({errorResponse}) => {
+      // Optional callback to decorate/add to the error response.
+      // By default, error responses follow the OAuth 2.0 error response format 
+      // @see https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
+      // This is typically used to add other application-specific fields to the JSON error response
+      errorResponse.appSpecificErrorCode = '1234';
+      return errorResponse;
+    },
+    
     // Optional logger object (such as console, pino, winston, and so on)
-    logger
+    logger: console
   }),
   (req, res, next) => {
     // ... continue with your route handling as usual
+    // `req.clientMetadata` will be set with
+    // the decoded and validated claims from the token
   }
 )
 ```
