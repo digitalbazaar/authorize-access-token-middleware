@@ -155,7 +155,7 @@ describe('authorizeAccessToken()', () => {
 
     expect(res.body.error).to.equal('invalid_token');
     expect(res.body.error_description).to.equal(
-      'Invalid issuer of access token: "https://invalid-issuer.com".');
+      'Token issuer "https://invalid-issuer.com" is not authorized.');
   });
 
   it('should error if token expired', async () => {
