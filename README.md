@@ -23,13 +23,12 @@ authentication (for that, Passport is more useful).
 Assumptions:
 
 * Access tokens will be passed via HTTP headers, using `Bearer <token>` scheme.
-* Assumes a required allow-list of approved issuers.
 
 Not supported in v1.0:
 
 * Optional authorization (that is, if you use this middleware, an access token
   is required).
-* Encrypted access tokens.
+* Automatically decripting access tokens (although you can decrypt them in the `decodeClaims` callback).
 * DPoP / proof of possession header functionality.
 
 ## Security
@@ -65,23 +64,22 @@ app.post('/example/api/endpoint',
   authorizeAccessToken({
     // OAuth2 scope required for this endpoint
     requiredScope: 'my.custom.scope',
-    // List of allowed issuers of tokens
+    
+    // Optional list of allowed issuers of tokens.
+    // If missing, issuer validation must be performed manually
+    // in validateClaims() callback.
     validIssuers: ['https://issuer.example.com'],
 
-    loadClientRegistration: async ({client_id}) => {
-      // Required callback - load client registration from database or other
-      // storage so that the access token scope can be compared with the client's
-      // granted scope. You can also do custom client validation here
-      // (has the client been revoked? ran over quota or metering limits?)
-    },
-    
-    // Custom verify callback should verify algorithm and signature (using a remote KMS or similar)
-    verifySignature: async ({alg, kid, data, signature}) => {
+    verify: async ({token}) => {
+      // REQUIRED verify callback must:
+      // 1. Decode the claims (decrypting the token, if encrypted) 
+      // 2. Verify key id, algorithm and signature (using a remote KMS or similar)
+      // 3. Return the token payload (claims)
     },
 
     validateClaims: async ({claims}) => {
       // Optional custom claim validation callback (for example, you can
-      // validate the `aud`ience claim)
+      // validate the `aud`ience claim). Expected to throw errors as appropriate.
     },
 
     decorateError: async ({errorResponse}) => {
