@@ -28,7 +28,7 @@ Not supported in v1.0:
 
 * Optional authorization (that is, if you use this middleware, an access token
   is required).
-* Automatically decripting access tokens (although you can decrypt them in the `decodeClaims` callback).
+* Automatically decrypting access tokens (although you can decrypt them in the `verify` callback).
 * DPoP / proof of possession header functionality.
 
 ## Security
