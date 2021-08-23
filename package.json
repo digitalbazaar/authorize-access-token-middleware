@@ -1,6 +1,6 @@
 {
   "name": "@digitalbazaar/authorize-access-token-middleware",
-  "version": "1.0.0",
+  "version": "1.0.1-0",
   "description": "General express middleware to protect API endpoints via OAuth 2.0 access tokens.",
   "homepage": "https://github.com/digitalbazaar/authorize-access-token-middleware",
   "author": {
