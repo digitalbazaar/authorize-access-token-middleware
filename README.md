@@ -1,6 +1,7 @@
 # JWT Access Token Authorization Middleware _(@digitalbazaar/authorize-access-token-middleware)_
 
 [![Node.js CI](https://github.com/digitalbazaar/authorize-access-token-middleware/workflows/Node.js%20CI/badge.svg)](https://github.com/digitalbazaar/authorize-access-token-middleware/actions?query=workflow%3A%22Node.js+CI%22)
+[![NPM Version](https://img.shields.io/npm/v/@digitalbazaar/authorize-access-token-middleware.svg)](https://npm.im/@digitalbazaar/authorize-access-token-middleware)
 
 > An opinionated Express-like middleware to protect API endpoints via OAuth 2.0 access tokens.
 
