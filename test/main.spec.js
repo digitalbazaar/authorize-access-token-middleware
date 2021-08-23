@@ -41,29 +41,20 @@ async function verifyFn({alg, kid, data, signature}) {
   }
 }
 
-const mockLoadClientRegistration = async ({client_id}) => {
-  if(client_id !== MOCK_CLIENT_ID) {
-    throw new Error('Not found.');
-  }
-  return {
-    client_id,
-    scope: 'read write'
-  };
-};
-
 describe('authorizeAccessToken()', () => {
   const app = express();
   app.post('/api/example',
     authorizeAccessToken({
       // scope required for this endpoint
       requiredScope: 'read write',
-      loadClientRegistration: mockLoadClientRegistration,
       validIssuers: ['https://issuer.example.com'],
+      verify: async ({token}) => {
+        return (await JWT.verify({jwt: token, verifyFn})).payload;
+      },
       // eslint-disable-next-line no-unused-vars
       validateClaims: async ({claims}) => {
         // perform custom validation on access token claims here
       },
-      verifySignature: verifyFn,
       // logger: console
     }),
     // eslint-disable-next-line no-unused-vars
@@ -76,7 +67,8 @@ describe('authorizeAccessToken()', () => {
 
   let requester;
   let validAccessToken;
-  let unregisteredClientToken;
+  let expiredAccessToken;
+  let invalidIssuerToken;
 
   before(async () => {
     validAccessToken = await JWT.sign({
@@ -91,13 +83,25 @@ describe('authorizeAccessToken()', () => {
       signFn
     });
 
-    unregisteredClientToken = await JWT.sign({
+    expiredAccessToken = await JWT.sign({
       header: {typ: 'JWT', alg: 'HS256', kid: '194B72684'},
       payload: {
         iss: 'https://issuer.example.com',
-        iat: 1613655020,
-        exp: 1645191020,
-        client_id: '<unregistered client id>',
+        iat: Date.now() / 1000,
+        exp: (Date.now() / 1000) - 10,
+        client_id: MOCK_CLIENT_ID,
+        scope: 'read write'
+      },
+      signFn
+    });
+
+    invalidIssuerToken = await JWT.sign({
+      header: {typ: 'JWT', alg: 'HS256', kid: '194B72684'},
+      payload: {
+        iss: 'https://invalid-issuer.com',
+        iat: Date.now() / 1000,
+        exp: (Date.now() / 1000) + 10,
+        client_id: MOCK_CLIENT_ID,
         scope: 'read write'
       },
       signFn
@@ -135,28 +139,35 @@ describe('authorizeAccessToken()', () => {
     const res = await requester.post('/api/example')
       .set('authorization', `Bearer ${INVALID_MOCK_ACCESS_TOKEN}`)
       .send({});
-    expect(res).to.have.status(403);
+    expect(res).to.have.status(401);
     expect(res).to.be.json;
-    expect(res.body.error).to.equal('access_denied');
-    expect(res.body.error_description).to.equal(
-      'Invalid access token. The access token could not be verified.');
-  });
 
-  it('should error if client id belongs to unregistered client', async () => {
-    const res = await requester.post('/api/example')
-      .set('authorization', `Bearer ${unregisteredClientToken}`)
-      .send({});
-    expect(res).to.have.status(400);
-    expect(res).to.be.json;
-    expect(res.body.error).to.equal('invalid_request');
+    expect(res.body.error).to.equal('invalid_token');
     expect(res.body.error_description).to.equal(
-      'Could not load a registered agent for the provided client ID.');
+      'Error verifying the access token.');
   });
 
   it('should error if issuer is not authorized', async () => {
+    const res = await requester.post('/api/example')
+      .set('authorization', `Bearer ${invalidIssuerToken}`)
+      .send({});
+    expect(res).to.have.status(401);
+    expect(res).to.be.json;
+
+    expect(res.body.error).to.equal('invalid_token');
+    expect(res.body.error_description).to.equal(
+      'Invalid issuer of access token: "https://invalid-issuer.com".');
   });
 
   it('should error if token expired', async () => {
+    const res = await requester.post('/api/example')
+      .set('authorization', `Bearer ${expiredAccessToken}`)
+      .send({});
+    expect(res).to.have.status(401);
+    expect(res).to.be.json;
+
+    expect(res.body.error).to.equal('invalid_token');
+    expect(res.body.error_description).to.equal('Access token has expired.');
   });
 
   it('should successfully authorize access token', async () => {
@@ -172,51 +183,31 @@ describe('authorizeAccessToken()', () => {
 describe('_assertScope', () => {
   it('should throw on missing params', () => {
     expect(() => _assertScope())
-      .to.throw(assert.AssertionError,
-        'options.tokenScope (string) is required');
-    expect(() => _assertScope({tokenScope: 'read'}))
-      .to.throw(assert.AssertionError,
-        'options.registeredScope (string) is required');
+      .to.throw();
   });
 
   it('should throw on token scope/required scope mismatch', () => {
     let error;
     try {
       _assertScope({
-        tokenScope: 'read', registeredScope: 'read', requiredScope: 'write'
+        tokenScope: 'read', requiredScope: 'write'
       });
     } catch(e) {
       error = e;
     }
+
     expect(error).to.exist;
-    expect(error.error).to.equal('access_denied');
+    expect(error.error).to.equal('insufficient_scope');
     expect(error.error_description).to
-      .equal('Access denied for token scope "read". Scope required: "write".');
+      .equal('Access denied for token scope "read".');
     expect(error.statusCode).to.equal(403);
   });
 
-  it('should throw on token scope/registered scope mismatch', () => {
+  it('should succeed on match between token and required scope', () => {
     let error;
     try {
       _assertScope({
-        tokenScope: 'write', registeredScope: 'read', requiredScope: 'write'
-      });
-    } catch(e) {
-      error = e;
-    }
-    expect(error).to.exist;
-    expect(error.error).to.equal('access_denied');
-    expect(error.error_description).to
-      .equal('Access denied. Token scope "write" does not match registered ' +
-        'client scope.');
-    expect(error.statusCode).to.equal(403);
-  });
-
-  it('should succeed on match between token, required and registered', () => {
-    let error;
-    try {
-      _assertScope({
-        tokenScope: 'read', registeredScope: 'read', requiredScope: 'read'
+        tokenScope: 'read', requiredScope: 'read'
       });
     } catch(e) {
       error = e;
@@ -228,8 +219,7 @@ describe('_assertScope', () => {
     let error;
     try {
       _assertScope({
-        tokenScope: 'read write', registeredScope: 'read write',
-        requiredScope: 'read'
+        tokenScope: 'read write', requiredScope: 'read'
       });
     } catch(e) {
       error = e;
@@ -237,34 +227,20 @@ describe('_assertScope', () => {
     expect(error).to.not.exist;
   });
 
-  it('should succeed when registered scope contains token scope', () => {
+  it('should fail when token scope is a subset of required', () => {
     let error;
     try {
       _assertScope({
-        tokenScope: 'read', registeredScope: 'read write',
-        requiredScope: 'read'
-      });
-    } catch(e) {
-      error = e;
-    }
-    expect(error).to.not.exist;
-  });
-
-  it('should fail when token scope is a subset of registered/required', () => {
-    let error;
-    try {
-      _assertScope({
-        tokenScope: 'read', registeredScope: 'read write',
+        tokenScope: 'read',
         requiredScope: 'write read'
       });
     } catch(e) {
       error = e;
     }
     expect(error).to.exist;
-    expect(error.error).to.equal('access_denied');
+    expect(error.error).to.equal('insufficient_scope');
     expect(error.error_description).to
-      .equal('Access denied for token scope "read". ' +
-        'Scope required: "write read".');
+      .equal('Access denied for token scope "read".');
     expect(error.statusCode).to.equal(403);
   });
 
@@ -272,16 +248,14 @@ describe('_assertScope', () => {
     let error;
     try {
       _assertScope({
-        tokenScope: 'read write', registeredScope: 'read write',
-        requiredScope: 'write read'
+        tokenScope: 'read write', requiredScope: 'write read'
       });
     } catch(e) {
       error = e;
     }
     try {
       _assertScope({
-        tokenScope: 'read write', registeredScope: 'write read',
-        requiredScope: 'write read'
+        tokenScope: 'read write', requiredScope: 'write read'
       });
     } catch(e) {
       error = e;
