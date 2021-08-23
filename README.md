@@ -91,6 +91,9 @@ app.post('/example/api/endpoint',
       return errorResponse;
     },
     
+    // Optional advanced override (an lru-memoize instance)
+    claimsCache: new LruCache({max: 100, maxAge: 5000}),
+
     // Optional logger object (such as console, pino, winston, and so on)
     logger: console
   }),
