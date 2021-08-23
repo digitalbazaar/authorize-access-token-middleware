@@ -1,7 +1,6 @@
 /*!
  * Copyright (c) 2021 Digital Bazaar, Inc. All rights reserved.
  */
-import assert from 'assert-plus';
 import chai from 'chai';
 import chaiHttp from 'chai-http';
 import crypto from 'crypto';
