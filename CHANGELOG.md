@@ -1,6 +1,6 @@
 # authorize-access-token-middleware Changelog
 
-## 2.0.0 - 2023-TBD
+## 2.0.0 - 2023-02-01
 
 ### Changed
 - **BREAKING**: Convert to module (ESM).
