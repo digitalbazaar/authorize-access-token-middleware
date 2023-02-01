@@ -169,7 +169,7 @@ describe('authorizeAccessToken()', () => {
     expect(res.body.error_description).to.equal('Access token has expired.');
   });
 
-  it.only('should successfully authorize access token', async () => {
+  it('should successfully authorize access token', async () => {
     const res = await requester.post('/api/example')
       .set('content-type', 'application/json')
       .set('authorization', `Bearer ${validAccessToken}`)
