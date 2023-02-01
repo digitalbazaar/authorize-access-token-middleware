@@ -69,12 +69,13 @@ describe('authorizeAccessToken()', () => {
   let invalidIssuerToken;
 
   before(async () => {
+    const now = Date.now();
     validAccessToken = await JWT.sign({
       header: {typ: 'JWT', alg: 'HS256', kid: '194B72684'},
       payload: {
         iss: 'https://issuer.example.com',
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000),
+        iat: Math.floor(now / 1000),
+        exp: Math.floor(now / 1000) + 100000,
         client_id: MOCK_CLIENT_ID,
         scope: 'read write'
       },
