@@ -3,6 +3,8 @@
   "version": "1.0.1-0",
   "description": "General express middleware to protect API endpoints via OAuth 2.0 access tokens.",
   "homepage": "https://github.com/digitalbazaar/authorize-access-token-middleware",
+  "type": "module",
+  "main": "./lib/index.js",
   "author": {
     "name": "Digital Bazaar, Inc.",
     "email": "support@digitalbazaar.com",
@@ -17,32 +19,31 @@
     "email": "support@digitalbazaar.com"
   },
   "license": "BSD-3-Clause",
-  "main": "lib/index.js",
   "scripts": {
     "lint": "eslint .",
     "test": "npm run lint && npm run test-node",
-    "test-node": "cross-env NODE_ENV=test mocha -r esm --preserve-symlinks -t 10000 test/**/*.spec.js"
+    "test-node": "cross-env NODE_ENV=test mocha --preserve-symlinks -t 10000 test/**/*.spec.js"
   },
   "files": [
     "lib/*.js"
   ],
-  "module": "lib/main.js",
   "dependencies": {
-    "@digitalbazaar/lru-memoize": "^2.1.0",
+    "@digitalbazaar/lru-memoize": "^3.0.0",
     "@interop/oauth2-errors": "^2.1.0",
     "assert-plus": "^1.0.0",
     "auth-header": "^1.0.0"
   },
   "devDependencies": {
     "@digitalbazaar/minimal-jwt": "^1.0.1",
-    "chai": "^4.3.4",
+    "chai": "^4.3.7",
     "chai-http": "^4.3.0",
     "cross-env": "^7.0.3",
-    "eslint": "^7.32.0",
-    "eslint-config-digitalbazaar": "^2.8.0",
-    "eslint-plugin-jsdoc": "^32.3.4",
-    "express": "^4.17.1",
-    "mocha": "^8.4.0"
+    "eslint": "^8.33.0",
+    "eslint-config-digitalbazaar": "^4.2.0",
+    "eslint-plugin-jsdoc": "^39.7.5",
+    "eslint-plugin-unicorn": "^45.0.2",
+    "express": "^4.18.2",
+    "mocha": "^10.2.0"
   },
   "engines": {
     "node": ">=16"
