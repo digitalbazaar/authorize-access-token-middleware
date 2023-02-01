@@ -54,8 +54,6 @@ npm install
 
 ```js
 import {authorizeAccessToken} from '@digitalbazaar/authorize-access-token-middleware';
-// or
-const {authorizeAccessToken} = require('@digitalbazaar/authorize-access-token-middleware');
 ```
 
 ### Adding authorization to an api route
@@ -65,7 +63,7 @@ app.post('/example/api/endpoint',
   authorizeAccessToken({
     // OAuth2 scope required for this endpoint
     requiredScope: 'my.custom.scope',
-    
+
     // Optional list of allowed issuers of tokens.
     // If missing, issuer validation must be performed manually
     // in validateClaims() callback.
@@ -73,7 +71,7 @@ app.post('/example/api/endpoint',
 
     verify: async ({token}) => {
       // REQUIRED verify callback must:
-      // 1. Decode the claims (decrypting the token, if encrypted) 
+      // 1. Decode the claims (decrypting the token, if encrypted)
       // 2. Verify key id, algorithm and signature (using a remote KMS or similar)
       // 3. Return the token payload (claims)
     },
@@ -85,13 +83,13 @@ app.post('/example/api/endpoint',
 
     decorateError: async ({errorResponse}) => {
       // Optional callback to decorate/add to the error response.
-      // By default, error responses follow the OAuth 2.0 error response format 
+      // By default, error responses follow the OAuth 2.0 error response format
       // @see https://datatracker.ietf.org/doc/html/rfc6749#section-5.2
       // This is typically used to add other application-specific fields to the JSON error response
       errorResponse.appSpecificErrorCode = '1234';
       return errorResponse;
     },
-    
+
     // Optional advanced override (an lru-memoize instance)
     claimsCache: new LruCache({max: 100, maxAge: 5000}),
 
