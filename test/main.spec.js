@@ -75,8 +75,8 @@ describe('authorizeAccessToken()', () => {
       header: {typ: 'JWT', alg: 'HS256', kid: '194B72684'},
       payload: {
         iss: 'https://issuer.example.com',
-        iat: Date.now(),
-        exp: Date.now(),
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000),
         client_id: MOCK_CLIENT_ID,
         scope: 'read write'
       },
