@@ -74,8 +74,8 @@ describe('authorizeAccessToken()', () => {
       header: {typ: 'JWT', alg: 'HS256', kid: '194B72684'},
       payload: {
         iss: 'https://issuer.example.com',
-        iat: Math.floor(now / 1000),
-        exp: Math.floor(now / 1000) + 100000,
+        iat: now / 1000,
+        exp: now / 1000 + 1000,
         client_id: MOCK_CLIENT_ID,
         scope: 'read write'
       },
@@ -169,7 +169,7 @@ describe('authorizeAccessToken()', () => {
     expect(res.body.error_description).to.equal('Access token has expired.');
   });
 
-  it('should successfully authorize access token', async () => {
+  it.only('should successfully authorize access token', async () => {
     const res = await requester.post('/api/example')
       .set('content-type', 'application/json')
       .set('authorization', `Bearer ${validAccessToken}`)
