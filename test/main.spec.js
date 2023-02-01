@@ -1,15 +1,13 @@
 /*!
  * Copyright (c) 2021-2023 Digital Bazaar, Inc. All rights reserved.
  */
+import * as JWT from '@digitalbazaar/minimal-jwt';
 import {_assertScope} from '../lib/authorizeAccessToken.js';
 import {authorizeAccessToken} from '../lib/index.js';
 import chai from 'chai';
 import chaiHttp from 'chai-http';
-import {createRequire} from 'node:module';
 import crypto from 'crypto';
 import express from 'express';
-const require = createRequire(import.meta.url);
-const JWT = require('@digitalbazaar/minimal-jwt');
 
 chai.use(chaiHttp);
 chai.should();
