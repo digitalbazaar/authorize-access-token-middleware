@@ -1,5 +1,5 @@
 /*!
- * Copyright (c) 2021 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2021-2023 Digital Bazaar, Inc. All rights reserved.
  */
 import chai from 'chai';
 import chaiHttp from 'chai-http';
