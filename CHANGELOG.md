@@ -1,6 +1,6 @@
 # authorize-access-token-middleware Changelog
 
-## 2.0.1 - 2023-TBD
+## 2.0.1 - 2023-02-02
 
 ### Fixed
 - Fix `node.js >= 16` requirement in `README.md`.
