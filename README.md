@@ -38,7 +38,7 @@ TBD
 
 ## Install
 
-- Node.js 12+ is required.
+- Node.js >= 16 is required.
 
 To install locally (for development):
 
